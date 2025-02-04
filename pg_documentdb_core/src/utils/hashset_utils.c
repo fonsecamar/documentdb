@@ -80,14 +80,14 @@ PgbsonElementHashEntryCompareFunc(const void *obj1, const void *obj2, Size objsi
 	const PgbsonElementHashEntry *hashEntry1 = obj1;
 	const PgbsonElementHashEntry *hashEntry2 = obj2;
 
-	int minLength = Min(hashEntry1->element.pathLength, hashEntry2->element.pathLength);
-	int result = strncmp(hashEntry1->element.path, hashEntry2->element.path, minLength);
-
-	if (result == 0)
-	{
-		return hashEntry1->element.pathLength - hashEntry2->element.pathLength;
+	// First, compare the lengths
+	int lengthDifference = hashEntry1->element.pathLength - hashEntry2->element.pathLength;
+	if (lengthDifference != 0) {
+		return lengthDifference;
 	}
-	return result;
+
+	// If lengths are equal, compare the paths
+	return strncmp(hashEntry1->element.path, hashEntry2->element.path, hashEntry1->element.pathLength);
 }
 
 
