@@ -322,7 +322,7 @@ bson_dollar_merge_handle_when_matched(PG_FUNCTION_ARGS)
 			PgbsonInitIterator(sourceDocument, &iterSource);
 
 			/* _id is already written to writer as first field of writer. so ignore for target document. */
-			if (!bson_iter_next(&iter) || strcmp(bson_iter_key(&iter), "_id") != 0)
+			if (!bson_iter_next(&iterTarget) || strcmp(bson_iter_key(&iterTarget), "_id") != 0)
 			{
 				/* In target document we expect _id to be first field. */
 				ereport(ERROR, (errcode(ERRCODE_DOCUMENTDB_INTERNALERROR),
@@ -371,24 +371,22 @@ bson_dollar_merge_handle_when_matched(PG_FUNCTION_ARGS)
 					}
 					else
 					{
-						PgbsonElementHashEntryOrdered *tempShift = tailTarget->next;
-
-						/* If target tail has next entry, means added by source. Need to re-sort.*/
-						if(tempShift != NULL)
+						/* If target tail has next entry, means added by source iterator. Need to shift references to preserve target order.*/
+						if(tailTarget->next != NULL)
 						{
-							/* If next entry points to current node, set to NULL to avoid circular reference */
-							if (tempShift->next == currNode)
+							/* If next entry points to current node, set to NULL to avoid circular reference/infinite loop */
+							if (tailTarget->next->next == currNode)
 							{
-								tempShift->next = NULL;
+								tailTarget->next->next = NULL;
 							}
 							/* If current node is different from next reference, current node now points to previous reference */
 							/* Source: C -> B -> A */
 							/* Target: A -> B -> C */
 							/* Before: A -> C      */
 							/* After : A -> B -> C */
-							else if (currNode != tempShift)
+							else if (tailTarget->next != currNode)
 							{
-								currNode->next = tempShift;
+								currNode->next = tailTarget->next;
 							}
 							/* Link tail with current node */
 							tailTarget->next = currNode;
